@@ -4,7 +4,7 @@ import asyncio
 
 scheduler = AsyncIOScheduler()
 
-scheduler.add_job(collect_news, 'interval', minutes=60*12)
+scheduler.add_job(collect_news, 'interval', minutes=60*36)
 
 async def main():
     scheduler.start()
