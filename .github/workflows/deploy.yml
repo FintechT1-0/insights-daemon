@@ -54,4 +54,6 @@ jobs:
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               -e SCRAPER_API_KEY=${{ secrets.SCRAPER_API_KEY }} \
               -e SCRAPER_API_URL=${{ secrets.SCRAPER_API_URL }} \
+              -e PROXIED=${{ secrets.PROXIED }} \
+              -e DELAY=${{ secrets.DELAY }} \
               $IMAGE
