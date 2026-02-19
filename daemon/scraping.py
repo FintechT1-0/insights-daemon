@@ -1,13 +1,17 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 from daemon.network import send_request
+from loguru import logger
 import re
 
+# is not a reliable pattern anymore
+'''
 def to_full_image_url(url: str) -> str:
     dash = url.rfind("-")
     dot = url.rfind(".")
     
     return url[:dash+1] + "scaled" + url[dot:]
+'''
 
 
 def extract_article_content_EN(url: str) -> str:
@@ -18,14 +22,24 @@ def extract_article_content_EN(url: str) -> str:
     if not content_div:
         return ""
 
+    image_url = None
     featured = content_div.find(class_="td-post-featured-image")
+
     if featured:
+        a_tag = featured.find("a", href=True)
+
+        if a_tag:
+            image_url = a_tag["href"]
+            
         featured.decompose()
 
     for el in content_div.find_all(id=lambda i: i and i.startswith("cp_popup")):
         el.decompose()
 
-    return str(content_div).replace("\xa0", " ")
+    return {
+        "text": str(content_div).replace("\xa0", " "),
+        "image": image_url
+    }
 
 
 def get_daily_news_EN():
@@ -36,6 +50,7 @@ def get_daily_news_EN():
     results = []
 
     for mod in modules:
+
         thumb_div = mod.find("div", class_="td-module-thumb")
         details_div = mod.find("div", class_="item-details")
         time_tag = mod.find("time")
@@ -60,9 +75,9 @@ def get_daily_news_EN():
         results.append({
             "url": article_url,
             "thumbnail": thumbnail,
-            "image": to_full_image_url(thumbnail),
+            "image": content["image"],
             "title": title,
-            "content": content,
+            "content": content["text"],
             "date": date,
             "excerpt": excerpt,
             "lang": "EN"
@@ -71,13 +86,25 @@ def get_daily_news_EN():
     return results
 
 
-def extract_article_content_UA(url: str) -> str:
+def extract_article_content_UA(url: str) -> dict:
     html = send_request(url, include_headers=False)
     soup = BeautifulSoup(html, "html.parser")
 
     content = soup.find("div", class_="content-spacious")
     if not content:
         return ""
+    
+    image_url = None
+    featured = soup.find("div", class_="featured")
+    logger.debug(f"UA news: featured {'found' if featured else 'not found'}")
+
+    if featured:
+        a_tag = featured.find("a", href=True)
+
+        if a_tag:
+            image_url = a_tag["href"]
+
+        featured.decompose()
 
     for div in content.find_all("div", class_="wp-block-image"):
         div.decompose()
@@ -85,7 +112,10 @@ def extract_article_content_UA(url: str) -> str:
     for a in content.find_all("a", class_="adc"):
         a.decompose()
 
-    return str(content).replace("\xa0", " ").replace("\n", "")
+    return {
+        "text": str(content).replace("\xa0", " ").replace("\n", ""),
+        "image": image_url
+    }
 
 
 def get_daily_news_UA():
@@ -121,8 +151,9 @@ def get_daily_news_UA():
         time_tag = content_div.find("time", class_="post-date")
         item["date"] = time_tag.get_text(strip=True) if time_tag else None
 
-        item["image"] = to_full_image_url(item["thumbnail"]) if item.get("thumbnail") else None
-        item["content"] = extract_article_content_UA(item["url"]) if item.get("url") else None
+        content = extract_article_content_UA(item["url"]) if item.get("url") else None
+        item["image"] = content["image"]
+        item["content"] = content["text"]
         item["lang"] = "UA"
 
         results.append(item)

@@ -10,7 +10,7 @@ import requests
 
 def send_request(url: str, retry_times: int = 5, include_headers: bool = True) -> str:
     for _ in range(retry_times):
-        logger.debug(f"{datetime.now()}, {'proxied' if settings.PROXIED else 'without proxy'}, requesting {url}")
+        logger.debug(f"{'proxied' if settings.PROXIED else 'without proxy'}, requesting {url}")
         try:
             if settings.PROXIED:
                 resp = requests.get(settings.SCRAPER_API_URL, params={
